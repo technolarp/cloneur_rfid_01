@@ -1,15 +1,9 @@
 {
-"objectName":"serrure rfid",
+
+"objectName":"cloneur rfid",
 "objectId":1,
 "groupId":1,
-"activeLeds":8,
-"brightness":80,
-"couleurs":[[255,0,0],[0,255,0]],
-"nbErreurCodeMax":3,
-"nbErreurCode":0,
-"delaiBlocage":5,
-"statutSerrureActuel":1,
-"statutSerrurePrecedent":1,
-"nbTag":1,
-"tagUid":[["01","02","03","04"]]
+"indexTag":0,
+"nbTag":0,
+"tagUid":[]
 }

@@ -20,14 +20,12 @@ class M_config
       
   	char objectName[SIZE_ARRAY];
   	
-  	uint8_t nbErreurCodeMax;
-  	uint8_t nbErreurCode;
-  	uint16_t delaiBlocage;
   	uint8_t statutCloneurActuel;
   	uint8_t statutCloneurPrecedent;
 
     uint8_t nbTag;
-    uint8_t tagUid[10][4];
+    uint8_t indexTag;
+    uint8_t tagUid[4][4];
   };
   
   // creer une structure
@@ -141,12 +139,10 @@ class M_config
     {
   		// Copy values from the JsonObject to the Config
   		objectConfig.objectId = doc["objectId"];
-  		objectConfig.groupId = doc["groupId"];      
-  		objectConfig.nbErreurCodeMax = doc["nbErreurCodeMax"];
-  		objectConfig.nbErreurCode = doc["nbErreurCode"];
-  		objectConfig.delaiBlocage = doc["delaiBlocage"];
+  		objectConfig.groupId = doc["groupId"];
   		objectConfig.statutCloneurActuel = doc["statutCloneurActuel"];
   		objectConfig.statutCloneurPrecedent = doc["statutCloneurPrecedent"];
+      objectConfig.indexTag = doc["indexTag"];
 
   		if (doc.containsKey("objectName"))
   		{ 
@@ -262,16 +258,17 @@ class M_config
 
     doc["objectId"] = objectConfig.objectId;
     doc["groupId"] = objectConfig.groupId;
-    doc["nbErreurCodeMax"] = objectConfig.nbErreurCodeMax;
-    doc["nbErreurCode"] = objectConfig.nbErreurCode;
-    doc["delaiBlocage"] = objectConfig.delaiBlocage;
     doc["statutCloneurActuel"] = objectConfig.statutCloneurActuel;
     doc["statutCloneurPrecedent"] = objectConfig.statutCloneurPrecedent;
 
     doc["nbTag"] = objectConfig.nbTag;
+    doc["indexTag"] = objectConfig.indexTag;    
     
     StaticJsonDocument<JSONBUFFERSIZE> docUidAll;
     JsonArray arrayUidAll = docUidAll.to<JsonArray>();
+    
+    // Serial.println("debug");
+    // Serial.println(objectConfig.nbTag);
     
     for (uint8_t i=0;i<objectConfig.nbTag;i++)
     {
@@ -283,7 +280,11 @@ class M_config
         char result[3];
         sprintf(result, "%02x", objectConfig.tagUid[i][j]);
         arrayUid.add(String(result));
+
+        // Serial.print(result);
+        // Serial.print(" ");
       }
+      // Serial.println(" ");
       
       arrayUidAll.add(arrayUid);
     }
@@ -366,17 +367,17 @@ class M_config
   {
 	objectConfig.objectId = 1;
 	objectConfig.groupId = 1;  
-	objectConfig.nbErreurCodeMax = 3;
-	objectConfig.nbErreurCode = 0;
-	objectConfig.delaiBlocage = 5;
 	objectConfig.statutCloneurActuel = 1;
 	objectConfig.statutCloneurPrecedent = 1;
 
-  objectConfig.nbTag = 1;
+  objectConfig.nbTag = 0;
+  objectConfig.indexTag = 0;
+  /*
   objectConfig.tagUid[0][0]=1;
   objectConfig.tagUid[0][1]=2;
   objectConfig.tagUid[0][2]=3;
   objectConfig.tagUid[0][3]=4;
+  */
 	
 	strlcpy(  objectConfig.objectName,
   			          "serrure rfid",

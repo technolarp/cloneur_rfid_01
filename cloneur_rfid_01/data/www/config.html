@@ -86,46 +86,7 @@
     {
       document.getElementById("objectName").value = obj.objectName;
     }
-	
-	if (obj.hasOwnProperty('activeLeds'))
-    {
-      document.getElementById("activeLeds").value = obj.activeLeds;
-    }
-	
-	if (obj.hasOwnProperty('couleurs'))
-    {
-      for (let i = 0; i < 2 ; i++)
-	  {
-		j=i+1;
-		couleurToChange = 'couleur'+j;
-		newColor="#" + zeroPad(obj.couleurs[i][0].toString(16), 2) + zeroPad(obj.couleurs[i][1].toString(16), 2) + zeroPad(obj.couleurs[i][2].toString(16), 2);
-		document.getElementById(couleurToChange).value = newColor;
-		//console.log(newColor);
-	  }
-    }
-	
-	if (obj.hasOwnProperty('brightness'))
-    {
-      document.getElementById("brightness").value = obj.brightness;
-      document.getElementById("brightness2").innerHTML = obj.brightness;
-    }
-	
-	if (obj.hasOwnProperty('nbErreurCodeMax'))
-    {
-      document.getElementById("nbErreurCodeMax").value = obj.nbErreurCodeMax;
-    }
-	
-	if (obj.hasOwnProperty('nbErreurCode'))
-    {
-      document.getElementById("nbErreurCode").innerHTML = obj.nbErreurCode;
-    }
-	
-	if (obj.hasOwnProperty('delaiBlocage'))
-    {
-      document.getElementById("delaiBlocage").value = obj.delaiBlocage;
-      document.getElementById("delaiBlocage2").innerHTML = obj.delaiBlocage;
-    }
-	
+		
 	if (obj.hasOwnProperty('tagUid') && obj.hasOwnProperty('nbTag') )
     {
       for (let i = 0; i < obj.nbTag ; i++)
@@ -149,7 +110,7 @@
 	  }
 	  document.getElementById("nbTag").innerHTML = obj.nbTag;
 	  
-	  for (let i = obj.nbTag; i < 10 ; i++)
+	  for (let i = obj.nbTag; i < 4 ; i++)
 	  {
 		tagName="tagUid_" + i;
 		buttonName="removeUidBut_" + i;
@@ -185,69 +146,20 @@
 		}
 	}
 	
-	if (obj.hasOwnProperty('statutSerrureActuel'))
+	if (obj.hasOwnProperty('statutCloneurActuel'))
     {
-		switch (obj.statutSerrureActuel)
+		switch (obj.statutCloneurActuel)
 		{
 		case 0:
-			document.getElementById("statutSerrureActuel").innerHTML = "OUVERTE";
+			document.getElementById("statutCloneurActuel").innerHTML = "LECTURE";
 		break;
 		
 		case 1:
-			document.getElementById("statutSerrureActuel").innerHTML = "FERMEE";
-		break;
-		
-		case 2:
-			document.getElementById("statutSerrureActuel").innerHTML = "BLOQUEE";
-		break;
-		
-		case 3:
-			document.getElementById("statutSerrureActuel").innerHTML = "ERREUR";
-		break;
-		
-		case 4:
-			document.getElementById("statutSerrureActuel").innerHTML = "RECONFIG";
-		break;
-		
-		case 5:
-			document.getElementById("statutSerrureActuel").innerHTML = "BLINK";
+			document.getElementById("statutCloneurActuel").innerHTML = "EMULATION";
 		break;
 		
 		default:
-		document.getElementById("statutSerrureActuel").innerHTML = "N/A";
-		}
-    }
-	
-	if (obj.hasOwnProperty('statutSerrurePrecedent'))
-    {
-		switch (obj.statutSerrurePrecedent)
-		{
-		case 0:
-			document.getElementById("statutSerrurePrecedent").innerHTML = "OUVERTE";
-		break;
-		
-		case 1:
-			document.getElementById("statutSerrurePrecedent").innerHTML = "FERMEE";
-		break;
-		
-		case 2:
-			document.getElementById("statutSerrurePrecedent").innerHTML = "BLOQUEE";
-		break;
-		
-		case 3:
-			document.getElementById("statutSerrurePrecedent").innerHTML = "ERREUR";
-		break;
-		
-		case 4:
-			document.getElementById("statutSerrurePrecedent").innerHTML = "RECONFIG";
-		break;
-		
-		case 5:
-			document.getElementById("statutSerrureActuel").innerHTML = "BLINK";
-		break;
-		
-		default:
-		document.getElementById("statutSerrurePrecedent").innerHTML = "N/A";
+		document.getElementById("statutCloneurActuel").innerHTML = "N/A";
 		}
     }
 	
@@ -330,43 +242,24 @@
       <td>
 		<table width="400px">
 		<tr>
-		<td width="200px">
+		<td width="400px">
 		0:&nbsp;&nbsp;<span id="tagUid_0"></span>&nbsp;&nbsp;<button id='removeUidBut_0' onclick="sendNewValue('removeUid',0, false);">&#10060;</button>
-		</td>
-		<td width="200px">
-		5:&nbsp;&nbsp;<span id="tagUid_5"></span>&nbsp;&nbsp;<button id='removeUidBut_5' onclick="sendNewValue('removeUid',5, false);">&#10060;</button>
 		</td>
 		</tr>
 		<tr>
 		<td>
 		1:&nbsp;&nbsp;<span id="tagUid_1"></span>&nbsp;&nbsp;<button id='removeUidBut_1' onclick="sendNewValue('removeUid',1, false);">&#10060;</button>
 		</td>
-		<td>
-		6:&nbsp;&nbsp;<span id="tagUid_6"></span>&nbsp;&nbsp;<button id='removeUidBut_6' onclick="sendNewValue('removeUid',6, false);">&#10060;</button>
-		</td>
 		</tr>
 		<tr>
 		<td>
 		2:&nbsp;&nbsp;<span id="tagUid_2"></span>&nbsp;&nbsp;<button id='removeUidBut_2' onclick="sendNewValue('removeUid',2, false);">&#10060;</button>
-		</td>
-		<td>
-		7:&nbsp;&nbsp;<span id="tagUid_7"></span>&nbsp;&nbsp;<button id='removeUidBut_7' onclick="sendNewValue('removeUid',7, false);">&#10060;</button>
 		</td>
 		</tr>
 		<tr>
 		<td>
 		3:&nbsp;&nbsp;<span id="tagUid_3"></span>&nbsp;&nbsp;<button id='removeUidBut_3' onclick="sendNewValue('removeUid',3, false);">&#10060;</button>
 		</td>
-		<td>
-		8:&nbsp;&nbsp;<span id="tagUid_8"></span>&nbsp;&nbsp;<button id='removeUidBut_8' onclick="sendNewValue('removeUid',8, false);">&#10060;</button>
-		</td>
-		</tr>
-		<tr>
-		<td>
-		4:&nbsp;&nbsp;<span id="tagUid_4"></span>&nbsp;&nbsp;<button id='removeUidBut_4' onclick="sendNewValue('removeUid',4, false);">&#10060;</button>
-		</td>
-		<td>
-		9:&nbsp;&nbsp;<span id="tagUid_9"></span>&nbsp;&nbsp;<button id='removeUidBut_9' onclick="sendNewValue('removeUid',9, false);">&#10060;</button>
 		</tr>
 		</table>
 	  </td>
@@ -386,44 +279,8 @@
 	  </td>
     </tr>	
 	<tr>
-      <td>Nombre Erreur Code Actuel : <span id="nbErreurCode" ></span>&nbsp;</td>
-      <td><button onclick="sendNewValue('resetErreur',1);">Reset Erreurs</button></td>
-    </tr>
-	<tr>
-      <td>Nombre Erreur Code MAX </td>
-      <td><input type="number" id="nbErreurCodeMax" name="nbErreurCodeMax" min="1" max="50" onchange="sendNewValue('nbErreurCodeMax',document.getElementById('nbErreurCodeMax').value, false);">&nbsp; &nbsp; &nbsp; &nbsp;  1 - 50</td>
-    </tr>
-	<tr>
-      <td>Delai de Blocage : <span id="delaiBlocage2"></span></td>
-      <td><input class="enabled" id="delaiBlocage" name="delaiBlocage" type="range" min="5" max="300" step="5" onChange="sendNewValue('delaiBlocage',document.getElementById('delaiBlocage').value, false);"> 5 - 300  secondes</td>
-    </tr>
-	<tr>
-      <td>Statuts Serrure</td>
-      <td>
-		<button onclick="sendNewValue('statutSerrureActuel',0, false);">Ouverte</button>
-		<button onclick="sendNewValue('statutSerrureActuel',1, false);">Fermée</button>
-		<button onclick="sendNewValue('statutSerrureActuel',2, false);">Bloquée</button>
-	  </td>
-    </tr>
-	<tr>
-      <td>Statuts Serrure</td>
-      <td>statut Serrure Precedent : <span id="statutSerrurePrecedent"></span><br>statut Serrure Actuel : <span id="statutSerrureActuel"></span></td>
-    </tr>
-	<tr>
-      <td>ActiveLeds </td>
-      <td><input type="number" id="activeLeds" name="activeLeds" min="1" max="24" onchange="sendNewValue('activeLeds',document.getElementById('activeLeds').value, false);"> &nbsp; &nbsp; &nbsp; &nbsp;  1 - %MAXLEDS%</td>
-    </tr>
-    <tr>
-      <td>Brightness : <span id="brightness2"></span></td>
-      <td><input class="enabled" id="brightness" name="brightness" type="range" min="0" max="255" step="5" onChange="sendNewValue('brightness',document.getElementById('brightness').value, false);"></td>
-    </tr>
-	<tr>
-      <td>Couleur fermee</td>
-      <td><input type="color" id="couleur1" name="couleur1" onchange="sendNewValue('couleurs','[0,&#34;'+this.value+'&#34;]', false);"></td>
-    </tr>
-	<tr>
-      <td>Couleur ouverte</td>
-      <td><input type="color" id="couleur2" name="couleur2" onchange="sendNewValue('couleurs','[1,&#34;'+this.value+'&#34;]', false);"></td>
+      <td>Statuts Cloneur</td>
+      <td>statut Cloneur : <span id="statutCloneurActuel"></span></td>
     </tr>
 	</table>
 	<table width=600>
