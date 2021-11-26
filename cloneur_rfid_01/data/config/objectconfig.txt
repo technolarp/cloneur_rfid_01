@@ -1,9 +1,11 @@
 {
-
 "objectName":"cloneur rfid",
 "objectId":1,
 "groupId":1,
-"indexTag":0,
-"nbTag":0,
-"tagUid":[]
+"statutActuel":1,
+"statutPrecedent":0,
+"nbTagStock":3,
+"indexTagActuel":0,
+"nbTagActuel":0,
+"tagUid":[["00","00","00","00"],["00","00","00","00"],["00","00","00","00"],["00","00","00","00"],["00","00","00","00"]]
 }

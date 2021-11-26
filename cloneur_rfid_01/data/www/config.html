@@ -8,7 +8,7 @@
 		table {border-collapse:collapse; max-width: 1000px;}
 		td {text-align: center;}
 		</style>
-		<title>%OBJECTNAME%    Back Office</title>
+		<title>Back Office</title>
 	</head>
 	<script>
   lastHeartBeat = Date.now();
@@ -64,8 +64,8 @@
     console.log(event.data);
 	var obj = JSON.parse(event.data);
     //console.log(event.data);
-    
-    if (obj.hasOwnProperty('uptime'))
+    	
+	if (obj.hasOwnProperty('uptime'))
     {
       document.getElementById("uptime").innerHTML = obj.uptime;
       document.getElementById("heartbeat").innerHTML = "&#x2764;";  // full heart
@@ -84,12 +84,15 @@
 	
 	if (obj.hasOwnProperty('objectName'))
     {
-      document.getElementById("objectName").value = obj.objectName;
+      document.title = obj.objectName + " Back Office";
+	  document.getElementById("objectName").value = obj.objectName;
+	  document.getElementById("objectNameTitle").innerHTML = obj.objectName + " Back Office";
     }
-		
-	if (obj.hasOwnProperty('tagUid') && obj.hasOwnProperty('nbTag') )
+	
+			
+	if (obj.hasOwnProperty('tagUid') && obj.hasOwnProperty('nbTagActuel')  && obj.hasOwnProperty('nbTagStock'))
     {
-      for (let i = 0; i < obj.nbTag ; i++)
+      for (let i = 0; i < obj.nbTagActuel ; i++)
 	  {
 		uid = "";
 		for (let j = 0; j < 4 ; j++)
@@ -108,9 +111,10 @@
 		document.getElementById(tagName).innerHTML=uid.toUpperCase();
 		document.getElementById(buttonName).innerHTML='&#10060;';
 	  }
-	  document.getElementById("nbTag").innerHTML = obj.nbTag;
+	  document.getElementById("nbTagActuel").innerHTML = obj.nbTagActuel;
+	  document.getElementById("nbTagStock").value = obj.nbTagStock;
 	  
-	  for (let i = obj.nbTag; i < 4 ; i++)
+	  for (let i = obj.nbTagActuel; i < 5 ; i++)
 	  {
 		tagName="tagUid_" + i;
 		buttonName="removeUidBut_" + i;
@@ -146,26 +150,32 @@
 		}
 	}
 	
-	if (obj.hasOwnProperty('statutCloneurActuel'))
+	if (obj.hasOwnProperty('statutActuel'))
     {
-		switch (obj.statutCloneurActuel)
+		switch (obj.statutActuel)
 		{
 		case 0:
-			document.getElementById("statutCloneurActuel").innerHTML = "LECTURE";
+			document.getElementById("statutActuel").innerHTML = "LECTURE";
 		break;
 		
 		case 1:
-			document.getElementById("statutCloneurActuel").innerHTML = "EMULATION";
+			document.getElementById("statutActuel").innerHTML = "EMULATION";
+		break;
+		
+		case 5:
+			document.getElementById("statutActuel").innerHTML = "BLINK";
 		break;
 		
 		default:
-		document.getElementById("statutCloneurActuel").innerHTML = "N/A";
+		document.getElementById("statutActuel").innerHTML = "N/A";
 		}
     }
 	
 	if (obj.hasOwnProperty('apName'))
     {
       document.getElementById("apName").value = obj.apName;
+      document.getElementById("apNameTitle").innerHTML = obj.apName + " Network config";
+	  
     }
 	
 	if (obj.hasOwnProperty('apPassword') && obj.apPassword != "")
@@ -223,7 +233,7 @@
 	<body>
 	<table width=600>
     <tr>
-      <td colspan="2"><h2>%OBJECTNAME% Back Office</h2></td>
+      <td colspan="2"><h2><span id="objectNameTitle"></span></h2></td>
     </tr>
     <tr>
       <td>Object name </td>
@@ -238,11 +248,15 @@
       <td><input type="number" id="groupId" name="groupId" min="1" max="1000" onchange="sendNewValue('groupId',document.getElementById('groupId').value, false);"> &nbsp; &nbsp; &nbsp; &nbsp; 1 - 1000</td>
     </tr>
 	<tr>
-      <td>Tags (<span id="nbTag"></span>/10)</td>
+      <td>nb tag en memoire</td>
+      <td><input type="number" id="nbTagStock" name="nbTagStock" min="1" max="5" onchange="sendNewValue('nbTagStock',this.value, false);"> &nbsp; &nbsp; &nbsp; &nbsp; 1 - 5</td>
+    </tr>
+	<tr>
+      <td>Tags (<span id="nbTagActuel"></span>/5)</td>
       <td>
-		<table width="400px">
+		<table width="500px">
 		<tr>
-		<td width="400px">
+		<td width="500px">
 		0:&nbsp;&nbsp;<span id="tagUid_0"></span>&nbsp;&nbsp;<button id='removeUidBut_0' onclick="sendNewValue('removeUid',0, false);">&#10060;</button>
 		</td>
 		</tr>
@@ -259,6 +273,11 @@
 		<tr>
 		<td>
 		3:&nbsp;&nbsp;<span id="tagUid_3"></span>&nbsp;&nbsp;<button id='removeUidBut_3' onclick="sendNewValue('removeUid',3, false);">&#10060;</button>
+		</td>
+		</tr>
+		<tr>
+		<td>
+		4:&nbsp;&nbsp;<span id="tagUid_4"></span>&nbsp;&nbsp;<button id='removeUidBut_4' onclick="sendNewValue('removeUid',4, false);">&#10060;</button>
 		</td>
 		</tr>
 		</table>
@@ -280,12 +299,12 @@
     </tr>	
 	<tr>
       <td>Statuts Cloneur</td>
-      <td>statut Cloneur : <span id="statutCloneurActuel"></span></td>
+      <td>statut Cloneur : <span id="statutActuel"></span></td>
     </tr>
 	</table>
 	<table width=600>
 	<tr>
-      <td colspan="2"><h2>%APNAME% Network config</h2></td>
+      <td colspan="2"><h2><span id="apNameTitle"></span></h2></td>
     </tr>
     <tr>
       <td>AP name </td>
@@ -317,7 +336,7 @@
     </tr>
 	<tr>
       <td>BLINK esp8266</td>
-      <td><button onclick="sendNewValue('statutSerrureActuel',5);">BLINK</button></td>
+      <td><button onclick="sendNewValue('statutActuel',5);">BLINK</button></td>
     </tr>
 	<tr>
       <td>Default Object config</td>

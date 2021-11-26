@@ -4,8 +4,10 @@
 // to upload config dile : https://github.com/earlephilhower/arduino-esp8266littlefs-plugin/releases
 #define SIZE_ARRAY 20
 #define MAX_SIZE_CODE 9
+#define MAX_NB_TAG 5
+#define SIZE_UID 4
 
-#define JSONBUFFERSIZE 2048
+#define JSONBUFFERSIZE 1024
 
 #include <IPAddress.h>
 
@@ -20,12 +22,13 @@ class M_config
       
   	char objectName[SIZE_ARRAY];
   	
-  	uint8_t statutCloneurActuel;
-  	uint8_t statutCloneurPrecedent;
+  	uint8_t statutActuel;
+  	uint8_t statutPrecedent;
 
-    uint8_t nbTag;
-    uint8_t indexTag;
-    uint8_t tagUid[4][4];
+    uint8_t nbTagStock;
+    uint8_t nbTagActuel;
+    uint8_t indexTagActuel;
+    uint8_t tagUid[MAX_NB_TAG][SIZE_UID];
   };
   
   // creer une structure
@@ -42,73 +45,9 @@ class M_config
   // creer une structure
   NETWORK_CONFIG_STRUCT networkConfig;
   
-  
   M_config()
   {
   }
-  
-  void mountFS()
-  {
-    Serial.println(F("Mount LittleFS"));
-    if (!LittleFS.begin())
-    {
-      Serial.println(F("LittleFS mount failed"));
-      return;
-    }
-  }
-  
-  void printJsonFile(const char * filename)
-  {
-    // Open file for reading
-    File file = LittleFS.open(filename, "r");
-    if (!file) 
-    {
-      Serial.println(F("Failed to open file for reading"));
-    }
-      
-    //StaticJsonDocument<2048> doc;
-    DynamicJsonDocument doc(JSONBUFFERSIZE);
-    
-    // Deserialize the JSON document
-    DeserializationError error = deserializeJson(doc, file);
-    if (error)
-    {
-      Serial.println(F("Failed to deserialize file in print object"));
-      Serial.println(error.c_str());
-    }
-    else
-    {
-      serializeJsonPretty(doc, Serial);
-      Serial.println();
-    }
-    
-    // Close the file (File's destructor doesn't close the file)
-    file.close();
-  }
-
-  
-  
-  void listDir(const char * dirname)
-  {
-    Serial.printf("Listing directory: %s", dirname);
-    Serial.println();
-  
-    Dir root = LittleFS.openDir(dirname);
-  
-    while (root.next())
-	  {
-      File file = root.openFile("r");
-      Serial.print(F("  FILE: "));
-      Serial.print(root.fileName());
-      Serial.print(F("  SIZE: "));
-      Serial.print(file.size());
-      Serial.println();
-      file.close();
-    }
-
-    Serial.println();
-  }
-  
   
   void readObjectConfig(const char * filename)
   {
@@ -125,8 +64,8 @@ class M_config
       Serial.println(F("File opened"));
     }
   
-    //StaticJsonDocument<4096> doc;
-    DynamicJsonDocument doc(JSONBUFFERSIZE);
+    StaticJsonDocument<JSONBUFFERSIZE> doc;
+    //DynamicJsonDocument doc(JSONBUFFERSIZE);
     
 	  // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, file);
@@ -140,40 +79,123 @@ class M_config
   		// Copy values from the JsonObject to the Config
   		objectConfig.objectId = doc["objectId"];
   		objectConfig.groupId = doc["groupId"];
-  		objectConfig.statutCloneurActuel = doc["statutCloneurActuel"];
-  		objectConfig.statutCloneurPrecedent = doc["statutCloneurPrecedent"];
-      objectConfig.indexTag = doc["indexTag"];
+  		objectConfig.statutActuel = doc["statutActuel"];
+  		objectConfig.statutPrecedent = doc["statutPrecedent"];
+      objectConfig.indexTagActuel = doc["indexTagActuel"];
+      objectConfig.nbTagStock = doc["nbTagStock"];
+      objectConfig.nbTagActuel = doc["nbTagActuel"];
 
-  		if (doc.containsKey("objectName"))
-  		{ 
-  			strlcpy(  objectConfig.objectName,
-  			          doc["objectName"],
-  			          sizeof(objectConfig.objectName));
-  		}
-  		
-  		if ( (doc.containsKey("tagUid")) && (doc.containsKey("nbTag")) )
+  		// read uid array
+  		if (doc.containsKey("tagUid"))
   		{
-  			JsonArray tagUidArray=doc["tagUid"];
-        objectConfig.nbTag = doc["nbTag"];
+  			//JsonArray uidDeserialize = docDeserialize["uid"];
+  			JsonArray tagUidArray = doc["tagUid"];
        
-  			for (uint8_t i=0;i<objectConfig.nbTag;i++)
+  			for (uint8_t i=0;i<MAX_NB_TAG;i++)
         {
           JsonArray uidArray=tagUidArray[i];
 
-          for (uint8_t j=0;j<4;j++)
+          for (uint8_t j=0;j<SIZE_UID;j++)
           {
-            String stringToConvert = uidArray[j];
-            uint8_t hexValue = (uint8_t) strtol( &stringToConvert[0], NULL, 16);
+            const char* tagUid_0 = uidArray[j]; 
+            uint8_t hexValue = (uint8_t) strtol( &tagUid_0[0], NULL, 16);
             objectConfig.tagUid[i][j] = hexValue;
           }
         }
   		}
+
+     // read object name
+     if (doc.containsKey("objectName"))
+     { 
+        strlcpy(  objectConfig.objectName,
+                  doc["objectName"],
+                  SIZE_ARRAY);
+                  //sizeof(objectConfig.objectName));
+      }
     }
   		
     // Close the file (File's destructor doesn't close the file)
     file.close();
   }
 
+  void writeObjectConfig(const char * filename)
+  { 
+    // Delete existing file, otherwise the configuration is appended to the file
+    LittleFS.remove(filename);
+  
+    // Open file for writing
+    File file = LittleFS.open(filename, "w");
+    if (!file) 
+    {
+      Serial.println(F("Failed to create file"));
+      return;
+    }
+
+    // Allocate a temporary JsonDocument
+    StaticJsonDocument<JSONBUFFERSIZE> doc;
+
+    doc["objectName"] = objectConfig.objectName;
+    
+    doc["objectId"] = objectConfig.objectId;
+    doc["groupId"] = objectConfig.groupId;
+    doc["statutActuel"] = objectConfig.statutActuel;
+    doc["statutPrecedent"] = objectConfig.statutPrecedent;
+
+    doc["indexTagActuel"] = objectConfig.indexTagActuel;
+    doc["nbTagStock"] = min<uint8_t>(objectConfig.nbTagStock,MAX_NB_TAG); 
+    doc["nbTagActuel"] = objectConfig.nbTagActuel;
+    
+    JsonArray tagUidArray = doc.createNestedArray("tagUid");
+
+    for (uint8_t i=0;i<MAX_NB_TAG;i++)
+    {
+      JsonArray uid_x = tagUidArray.createNestedArray();
+  
+      for (uint8_t j=0;j<SIZE_UID;j++)
+      {
+        char result[2];
+        sprintf(result, "%02X", objectConfig.tagUid[i][j]);
+        
+        uid_x.add(result);
+      }
+    }
+
+    // Serialize JSON to file
+    if (serializeJson(doc, file) == 0) 
+    {
+      Serial.println(F("Failed to write to file"));
+    }
+
+    // Close the file (File's destructor doesn't close the file)
+    file.close();
+  }
+
+  void writeDefaultObjectConfig(const char * filename)
+  {
+    objectConfig.objectId = 1;
+    objectConfig.groupId = 1;  
+    objectConfig.statutActuel = 1;
+    objectConfig.statutPrecedent = 1;
+  
+    objectConfig.nbTagStock = 5;
+    objectConfig.nbTagActuel = 0;
+    objectConfig.indexTagActuel = 0;
+  
+    for (uint8_t i=0;i<MAX_NB_TAG;i++)
+    {
+      for (uint8_t j=0;j<SIZE_UID;j++)
+      {
+        objectConfig.tagUid[i][j] = 0;
+      }
+    }
+    
+    strlcpy( objectConfig.objectName,
+             "cloneur rfid",
+             sizeof("cloneur rfid"));
+    
+    writeObjectConfig(filename);
+    }
+  
   void readNetworkConfig(const char * filename)
   {
     // lire les données depuis le fichier littleFS
@@ -240,74 +262,6 @@ class M_config
     file.close();
   }
   
-  void writeObjectConfig(const char * filename)
-  {
-    // Delete existing file, otherwise the configuration is appended to the file
-    LittleFS.remove(filename);
-  
-    // Open file for writing
-    File file = LittleFS.open(filename, "w");
-    if (!file) 
-    {
-      Serial.println(F("Failed to create file"));
-      return;
-    }
-
-    // Allocate a temporary JsonDocument
-    StaticJsonDocument<JSONBUFFERSIZE> doc;
-
-    doc["objectId"] = objectConfig.objectId;
-    doc["groupId"] = objectConfig.groupId;
-    doc["statutCloneurActuel"] = objectConfig.statutCloneurActuel;
-    doc["statutCloneurPrecedent"] = objectConfig.statutCloneurPrecedent;
-
-    doc["nbTag"] = objectConfig.nbTag;
-    doc["indexTag"] = objectConfig.indexTag;    
-    
-    StaticJsonDocument<JSONBUFFERSIZE> docUidAll;
-    JsonArray arrayUidAll = docUidAll.to<JsonArray>();
-    
-    // Serial.println("debug");
-    // Serial.println(objectConfig.nbTag);
-    
-    for (uint8_t i=0;i<objectConfig.nbTag;i++)
-    {
-      StaticJsonDocument<128> docUid;
-      JsonArray arrayUid = docUid.to<JsonArray>();
-      
-      for (uint8_t j=0;j<4;j++)
-      {
-        char result[3];
-        sprintf(result, "%02x", objectConfig.tagUid[i][j]);
-        arrayUid.add(String(result));
-
-        // Serial.print(result);
-        // Serial.print(" ");
-      }
-      // Serial.println(" ");
-      
-      arrayUidAll.add(arrayUid);
-    }
-    doc["tagUid"]=arrayUidAll;
-    
-    String newObjectName="";    
-    for (int i=0;i<SIZE_ARRAY;i++)
-    {
-      newObjectName+= objectConfig.objectName[i];
-    }    
-    doc["objectName"] = newObjectName;
-    
-
-    // Serialize JSON to file
-    if (serializeJson(doc, file) == 0) 
-    {
-      Serial.println(F("Failed to write to file"));
-    }
-
-    // Close the file (File's destructor doesn't close the file)
-    file.close();
-  }
-
   void writeNetworkConfig(const char * filename)
   {
     // Delete existing file, otherwise the configuration is appended to the file
@@ -324,17 +278,8 @@ class M_config
     // Allocate a temporary JsonDocument
     StaticJsonDocument<1024> doc;
 
-    String newApName="";
-    String newApPassword="";
-    
-    for (int i=0;i<SIZE_ARRAY;i++)
-    {
-      newApName+= networkConfig.apName[i];
-      newApPassword+= networkConfig.apPassword[i];
-    }
-    
-    doc["apName"] = newApName;
-    doc["apPassword"] = newApPassword;
+    doc["apName"] = networkConfig.apName;
+    doc["apPassword"] = networkConfig.apPassword;
 
     StaticJsonDocument<128> docIp;
     JsonArray arrayIp = docIp.to<JsonArray>();
@@ -363,38 +308,15 @@ class M_config
     file.close();
   }
   
-  void writeDefaultObjectConfig(const char * filename)
-  {
-	objectConfig.objectId = 1;
-	objectConfig.groupId = 1;  
-	objectConfig.statutCloneurActuel = 1;
-	objectConfig.statutCloneurPrecedent = 1;
-
-  objectConfig.nbTag = 0;
-  objectConfig.indexTag = 0;
-  /*
-  objectConfig.tagUid[0][0]=1;
-  objectConfig.tagUid[0][1]=2;
-  objectConfig.tagUid[0][2]=3;
-  objectConfig.tagUid[0][3]=4;
-  */
-	
-	strlcpy(  objectConfig.objectName,
-  			          "serrure rfid",
-  			          sizeof("serrure rfid"));
-	
-	writeObjectConfig(filename);
-  }
-
   void writeDefaultNetworkConfig(const char * filename)
   {
   strlcpy(  networkConfig.apName,
-                  "SERRURERFID",
-                  sizeof("SERRURERFID"));
+            "CLONEURRFID",
+            sizeof("CLONEURRFID"));
   
   strlcpy(  networkConfig.apPassword,
-                  "",
-                  sizeof(""));
+            "",
+            sizeof(""));
 
   networkConfig.apIP[0]=192;
   networkConfig.apIP[1]=168;
@@ -409,10 +331,52 @@ class M_config
   writeNetworkConfig(filename);
   }
 
-  String stringJsonFile(const char * filename)
+  
+  void stringJsonFile(const char * filename, char * target, uint16_t targetReadSize)
   {
-    String result = "";
+    // Open file for reading
+    File file = LittleFS.open(filename, "r");
+    if (!file) 
+    {
+      Serial.println(F("Failed to open file for reading"));
+    }
+    else
+    {
+      uint16_t cptRead = 0;
+      while ( (file.available()) && (cptRead<targetReadSize) )
+      {
+        target[cptRead] = file.read();
+        cptRead++;
+      }
+
+      if (cptRead<targetReadSize)
+      {
+        target[cptRead] = '\0';
+      }
+      else
+      {
+        target[targetReadSize] = '\0';
+      }
+      //Serial.print(F("char lus: "));
+      //Serial.println(cptRead);
+    }
     
+    // Close the file (File's destructor doesn't close the file)
+    file.close();
+  }
+
+  void mountFS()
+  {
+    Serial.println(F("Mount LittleFS"));
+    if (!LittleFS.begin())
+    {
+      Serial.println(F("LittleFS mount failed"));
+      return;
+    }
+  }
+  
+  void printJsonFile(const char * filename)
+  {
     // Open file for reading
     File file = LittleFS.open(filename, "r");
     if (!file) 
@@ -420,23 +384,46 @@ class M_config
       Serial.println(F("Failed to open file for reading"));
     }
       
-    //StaticJsonDocument<1024> doc;
-    DynamicJsonDocument doc(JSONBUFFERSIZE);
+    StaticJsonDocument<JSONBUFFERSIZE> doc;
+    //DynamicJsonDocument doc(JSONBUFFERSIZE);
     
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, file);
     if (error)
     {
-      Serial.println(F("Failed to deserialize file in json file"));
+      Serial.println(F("Failed to deserialize file in print object"));
       Serial.println(error.c_str());
     }
     else
     {
-      serializeJson(doc, result);
+      //serializeJsonPretty(doc, Serial);
+      serializeJson(doc, Serial);
+      Serial.println();
     }
     
     // Close the file (File's destructor doesn't close the file)
     file.close();
-    return(result);
   }
+  
+  void listDir(const char * dirname)
+  {
+    Serial.printf("Listing directory: %s", dirname);
+    Serial.println();
+  
+    Dir root = LittleFS.openDir(dirname);
+  
+    while (root.next())
+    {
+      File file = root.openFile("r");
+      Serial.print(F("  FILE: "));
+      Serial.print(root.fileName());
+      Serial.print(F("  SIZE: "));
+      Serial.print(file.size());
+      Serial.println();
+      file.close();
+    }
+
+    Serial.println();
+  }
+
 };
