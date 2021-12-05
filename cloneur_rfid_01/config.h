@@ -64,7 +64,6 @@ class M_config
     }
   
     StaticJsonDocument<JSONBUFFERSIZE> doc;
-    //DynamicJsonDocument doc(JSONBUFFERSIZE);
     
 	  // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, file);
@@ -213,7 +212,7 @@ class M_config
       Serial.println(F("File opened"));
     }
   
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<JSONBUFFERSIZE> doc;
     
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, file);
@@ -278,7 +277,7 @@ class M_config
     }
 
     // Allocate a temporary JsonDocument
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<JSONBUFFERSIZE> doc;
 
     doc["apName"] = networkConfig.apName;
     doc["apPassword"] = networkConfig.apPassword;
@@ -333,7 +332,6 @@ class M_config
   writeNetworkConfig(filename);
   }
 
-  
   void stringJsonFile(const char * filename, char * target, uint16_t targetReadSize)
   {
     // Open file for reading
@@ -363,7 +361,6 @@ class M_config
       //Serial.println(cptRead);
     }
     
-    // Close the file (File's destructor doesn't close the file)
     file.close();
   }
 
@@ -387,7 +384,6 @@ class M_config
     }
       
     StaticJsonDocument<JSONBUFFERSIZE> doc;
-    //DynamicJsonDocument doc(JSONBUFFERSIZE);
     
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, file);
@@ -427,5 +423,4 @@ class M_config
 
     Serial.println();
   }
-
 };

@@ -14,6 +14,7 @@
    1 ecran oled i2c
    1 interrupteur on/off
    1 MCP23017
+   1 buzzer piezo
    ----------------------------------------------------------------------------
 */
 
@@ -23,6 +24,7 @@
    D0     NEOPIXEL
    D1     I2C SCL => SCL PN532
    D2     I2C SDA => SDA PN532
+   D8     BUZZER
 
    SPI BUS
    D3     PN532 SS/SDA
@@ -33,13 +35,8 @@
 */
 
 /* TODO
-add buzzer
-move blink oled lib
-move rfid reading lib
-ajouter animation init au demarrage
-add reset config object & network
-faire une validation delete tag
-clean up code
+faire une animation hacker
+check doublon
 */
 
 #include <Arduino.h>
@@ -87,6 +84,11 @@ M_mcp23017 aMcp23017;
 #include <technolarp_oled.h>
 M_oled aOled;
 
+// BUZZER
+#define PIN_BUZZER D8
+#include <technolarp_buzzer.h>
+M_buzzer buzzer(PIN_BUZZER);
+
 // CONFIG
 #include "config.h"
 M_config aConfig;
@@ -94,11 +96,16 @@ M_config aConfig;
 char bufferToSend[500];
 char bufferUid[12];
 
-// STATUTS DU CLONEUR
+// STATUTS DE L OBJET
 enum {
-  CLONEUR_LECTURE = 0,
-  CLONEUR_EMULATION = 1,
-  CLONEUR_BLINK = 5
+  OBJET_OUVERT = 0,
+  OBJET_FERME = 1,
+  OBJET_BLOQUE = 2,
+  OBJET_ERREUR = 3,
+  OBJET_RECONFIG = 4,
+  OBJET_BLINK = 5,
+  OBJET_LECTURE = 6,
+  OBJET_EMULATION = 7
 };
 
 // DIVERS
@@ -106,12 +113,6 @@ bool uneFois = true;
 
 uint32_t previousMillisReading;
 uint32_t intervalReading;
-
-// BLINK
-uint32_t previousMillisBlink;
-uint32_t intervalBlink;
-bool blinkFlag = true;
-uint8_t cptBlink = 0;
 
 // HEARTBEAT
 unsigned long int previousMillisHB;
@@ -168,7 +169,6 @@ void setup()
 
   // OLED
   aOled.beginOled();
-  aOled.displayText("SETUP", 3, true, true, true, false);
   
   // CONFIG OBJET
   Serial.println(F(""));
@@ -185,12 +185,43 @@ void setup()
   //aConfig.printJsonFile("/config/networkconfig.txt");
   aConfig.readNetworkConfig("/config/networkconfig.txt");
 
+  aOled.animationDepart();
+
+  // CHECK RESET OBJECT CONFIG  
+  if (!aMcp23017.readPin(BOUTON_2) && !aMcp23017.readPin(BOUTON_4) )
+  {
+    aOled.displayText("RESET", 2, true, false, false, true);
+    aOled.displayText("OBJET", 2, false, true, false, false);
+    
+    Serial.println(F(""));
+    Serial.println(F("!!! RESET OBJECT CONFIG !!!"));
+    Serial.println(F(""));
+    aConfig.writeDefaultObjectConfig("/config/objectconfig.txt");
+    aConfig.printJsonFile("/config/objectconfig.txt");
+
+    delay(1000);
+  }
+
+  // CHECK RESET NETWORK CONFIG  
+  if (!aMcp23017.readPin(BOUTON_3) && !aMcp23017.readPin(BOUTON_4) )
+  {
+    aOled.displayText("RESET", 2, true, false, false, true);
+    aOled.displayText("NETWORK", 2, false, true, false, false);
+    
+    Serial.println(F(""));
+    Serial.println(F("!!! RESET NETWORK CONFIG !!!"));
+    Serial.println(F(""));
+    aConfig.writeDefaultNetworkConfig("/config/networkconfig.txt");
+    aConfig.printJsonFile("/config/networkconfig.txt");
+
+    delay(1000);
+  }
+
   // WIFI
   WiFi.disconnect(true);
   Serial.println(F(""));
   Serial.println(F("connecting WiFi"));
   
-  aOled.displayText("Init", 3, true, true, true, false);
   
   // AP MODE
   WiFi.mode(WIFI_AP_STA);
@@ -242,6 +273,9 @@ void setup()
   previousMillisReading = millis();
   intervalReading = 500;
 
+  // BUZZER
+  buzzer.doubleBeep();
+
   // SERIAL
   Serial.println(F(""));
   Serial.println(F(""));
@@ -268,40 +302,49 @@ void loop()
   
   // WEBSOCKET
   ws.cleanupClients();
+
+  // BUZZER
+  buzzer.update();
+
+  // OLED
+  aOled.updateAnimation();
   
-  // INTER
-  if (aConfig.objectConfig.statutActuel != CLONEUR_BLINK)
+  // check selecteur mode
+  if (aConfig.objectConfig.statutActuel != OBJET_BLINK)
   {
     if (aMcp23017.readPin(BOUTON_1))
     {
-      aConfig.objectConfig.statutActuel = CLONEUR_LECTURE;
+      aConfig.objectConfig.statutActuel = OBJET_LECTURE;
     }
     else
     {
-      aConfig.objectConfig.statutActuel = CLONEUR_EMULATION;
+      aConfig.objectConfig.statutActuel = OBJET_EMULATION;
     }
   
+    // changement de mode
     if (aConfig.objectConfig.statutActuel != aConfig.objectConfig.statutPrecedent)
     {
       uneFois = true;
       aConfig.objectConfig.statutPrecedent = aConfig.objectConfig.statutActuel;
+      buzzer.shortBeep();
+      sendStatut();
     }
   }
   
   // gerer le statut du cloneur
   switch (aConfig.objectConfig.statutActuel)
   {
-    case CLONEUR_LECTURE:
+    case OBJET_LECTURE:
       // la serrure est fermee
       cloneurLecture();
       break;
 
-    case CLONEUR_EMULATION:
+    case OBJET_EMULATION:
       // la serrure est ouverte
       cloneurEmulation();
       break;
 
-    case CLONEUR_BLINK:
+    case OBJET_BLINK:
       // la serrure est ouverte
       cloneurBlink();
       break;
@@ -394,6 +437,7 @@ void readRfidTag()
       aOled.displayText(bufferUid, 1, false, true, false, false);
 
       sendTagUid();
+      buzzer.shortBeep();
     }
   }
   
@@ -416,6 +460,8 @@ void readRfidTag()
       aOled.displayText("ajout tag OK", 1, false, true, false, false);
 
       sendObjectConfig();
+      
+      buzzer.doubleBeep();
     
       Serial.println("ajout tag OK");
     }
@@ -425,6 +471,8 @@ void readRfidTag()
       stringTagUid(bufferUid);
       aOled.displayText(bufferUid, 1, false, false, false, true);
       aOled.displayText("trop de tag...", 1, false, true, false, false);
+
+      buzzer.longBeep();
       Serial.println("trop de tag...");
     }
   }
@@ -455,8 +503,6 @@ void cloneurEmulation()
   // emulation
   emulateRfidTag();
 }
-
-
 
 void emulateRfidTag()
 {
@@ -516,6 +562,8 @@ void emulateRfidTag()
     
     writeObjectConfig();
     sendObjectConfig();
+
+    buzzer.doubleBeep();
   }
 }
 
@@ -525,49 +573,24 @@ void cloneurBlink()
   {
     uneFois = false;
 
-    Serial.print(F("CLONEUR BLINK"));
-    Serial.println();
+    Serial.println(F("CLONEUR BLINK"));
 
-    previousMillisBlink = millis();
-    intervalBlink = 300;
-
-    blinkFlag = true;
-    cptBlink = 0;
+    //aOled.animationBlink01Start(300, 20);
+    aOled.animationBlink02Start(300, 3000);
   }
 
-  if(millis() - previousMillisBlink > intervalBlink)
-  {
-    previousMillisBlink = millis();
-    blinkFlag = !blinkFlag;
-
-    cptBlink++;
-
-    aOled.clearDisplay();
-    if (blinkFlag)
-    {
-      aOled.displayFillCircle(63, 31, 15);
-    }
-    else
-    {
-      aOled.displayCircle(63, 31, 15);
-    }
-    aOled.display();
-  }
-
-  if (cptBlink>20)
+  // fin de l'animation blink
+  if(!aOled.isAnimActive()) 
   {
     aConfig.objectConfig.statutActuel = aConfig.objectConfig.statutPrecedent;
-    aConfig.objectConfig.statutPrecedent = CLONEUR_BLINK;
+    aConfig.objectConfig.statutPrecedent = OBJET_BLINK;
     writeObjectConfig();
     sendObjectConfig();
   }
-  
 }
 
 void checkCharacter(char* toCheck, char* allowed, char replaceChar)
 {
-  //char *allowed = "0123456789ABCD*";
-
   for (int i = 0; i < strlen(toCheck); i++)
   {
     if (!strchr(allowed, toCheck[i]))
@@ -758,7 +781,7 @@ void sendUptime()
   //Serial.println(toSend);
 }
 
-void sendStatutCloneur()
+void sendStatut()
 {
   char toSend[100];
   snprintf(toSend, 100, "{\"statutActuel\":%i}", aConfig.objectConfig.statutActuel); 
@@ -794,7 +817,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 
         // send volatile info
         sendUptime();
-        sendStatutCloneur();
+        sendStatut();
         
         break;
         
