@@ -1,0 +1,359 @@
+<!DOCTYPE HTML>
+<html>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<head>
+		<style>
+		table, td, th {border: 1px solid black;}
+		table {border-collapse:collapse; max-width: 1000px;}
+		td {text-align: center;}
+		</style>
+		<title>Back Office</title>
+	</head>
+	<script>
+  lastHeartBeat = Date.now();
+  
+  // leading zero convertor
+  const zeroPad = (num, places) => String(num).padStart(places, '0')
+
+  function checkHeartbeat()
+  {
+    if (Date.now() - lastHeartBeat > 10000)
+    {
+      document.getElementById("heartbeat").innerHTML = "&#x2620;"
+      console.log('Lost HeartBeat');
+    }
+  }
+
+  setInterval(checkHeartbeat, 10000);
+  
+  var gateway = `ws://${window.location.hostname}/ws`;
+  
+  var websocket;
+  window.addEventListener('load', onLoad);
+  
+  function initWebSocket() 
+  {
+    console.log('Trying to open a WebSocket connection...');
+    websocket = new WebSocket(gateway);
+    websocket.onopen    = onOpen;
+    websocket.onclose   = onClose;
+    websocket.onmessage = onMessage;
+  }
+  
+  function onOpen(event) 
+  {
+    console.log('Connection opened');
+    document.getElementById("ws_connect").innerHTML = "&#9989;";
+  }
+  
+  function onClose(event) 
+  {
+    console.log('Connection closed');
+    setTimeout(initWebSocket, 2000);
+    document.getElementById("ws_connect").innerHTML = "&#10060;";
+  }
+  
+  function onLoad(event) 
+  {
+    initWebSocket();
+  }
+  
+  function onMessage(event) 
+  {
+    console.log(event.data);
+	var obj = JSON.parse(event.data);
+    //console.log(event.data);
+    	
+	if (obj.hasOwnProperty('uptime'))
+    {
+      document.getElementById("uptime").innerHTML = obj.uptime;
+      document.getElementById("heartbeat").innerHTML = "&#x2764;";  // full heart
+      lastHeartBeat = Date.now();
+    }
+	
+	if (obj.hasOwnProperty('objectId'))
+    {
+      document.getElementById("objectId").value = obj.objectId;
+    }
+	
+	if (obj.hasOwnProperty('groupId'))
+    {
+      document.getElementById("groupId").value = obj.groupId;
+    }
+	
+	if (obj.hasOwnProperty('objectName'))
+    {
+      document.title = obj.objectName + " Back Office";
+	  document.getElementById("objectName").value = obj.objectName;
+	  document.getElementById("objectNameTitle").innerHTML = obj.objectName + " Back Office";
+    }
+	
+			
+	if (obj.hasOwnProperty('tagUid') && obj.hasOwnProperty('nbTagEnMemoireActuel')  && obj.hasOwnProperty('nbTagEnMemoireMax'))
+    {
+      for (let i = 0; i < obj.nbTagEnMemoireActuel ; i++)
+	  {
+		uid = "";
+		for (let j = 0; j < 4 ; j++)
+		{
+			uid = uid + obj.tagUid[i][j];
+			if (j<3)
+			{
+				uid = uid + ":";
+			}
+		}
+		tagName="tagUid_" + i;
+		buttonName="removeUidBut_" + i;
+		document.getElementById(tagName).disabled = false;
+		document.getElementById(buttonName).disabled = false;
+				
+		document.getElementById(tagName).innerHTML=uid.toUpperCase();
+		document.getElementById(buttonName).innerHTML='&#10060;';
+	  }
+	  document.getElementById("nbTagEnMemoireActuel").innerHTML = obj.nbTagEnMemoireActuel;
+	  document.getElementById("nbTagEnMemoireMax").value = obj.nbTagEnMemoireMax;
+	  
+	  for (let i = obj.nbTagEnMemoireActuel; i < 5 ; i++)
+	  {
+		tagName="tagUid_" + i;
+		buttonName="removeUidBut_" + i;
+		document.getElementById(tagName).disabled = true;
+		document.getElementById(buttonName).disabled = true;
+				
+		document.getElementById(tagName).innerHTML='-';
+		document.getElementById(buttonName).innerHTML='X';
+	  }
+    }
+	
+	if (obj.hasOwnProperty('lastTagUid'))
+	{
+		newUid = "";
+		for (let i = 0; i < 4 ; i++)
+		{
+			newUid = newUid + obj.lastTagUid[i];
+			if (i<3)
+			{
+				newUid = newUid + ":";
+			}
+		}
+		
+		document.getElementById("lastTagUid").innerHTML=newUid.toUpperCase();
+		document.getElementById('addLastUid').disabled = false
+	}
+	else
+	{
+		toTest = document.getElementById("lastTagUid").innerHTML;
+		if(toTest.length == 0)
+		{
+			document.getElementById('addLastUid').disabled = true;
+		}
+	}
+	
+	if (obj.hasOwnProperty('statutActuel'))
+    {
+		switch (obj.statutActuel)
+		{
+		case 5:
+			document.getElementById("statutActuel").innerHTML = "BLINK";
+		break;
+		
+		case 6:
+			document.getElementById("statutActuel").innerHTML = "LECTURE";
+		break;
+		
+		case 7:
+			document.getElementById("statutActuel").innerHTML = "EMULATION";
+		break;
+		
+		default:
+		document.getElementById("statutActuel").innerHTML = "N/A";
+		}
+    }
+	
+	if (obj.hasOwnProperty('apName'))
+    {
+      document.getElementById("apName").value = obj.apName;
+      document.getElementById("apNameTitle").innerHTML = obj.apName + " Network config";
+	  
+    }
+	
+	if (obj.hasOwnProperty('apPassword') && obj.apPassword != "")
+    {
+      document.getElementById("apPassword").value = obj.apPassword;
+    }
+	
+	if (obj.hasOwnProperty('apIP'))
+    {
+      document.getElementById("apIP").value = obj.apIP[0] + "." + obj.apIP[1] + "." + obj.apIP[2] + "." + obj.apIP[3];
+    }
+	
+	if (obj.hasOwnProperty('apNetMsk'))
+    {
+      document.getElementById("apNetMsk").value = obj.apNetMsk[0] + "." + obj.apNetMsk[1] + "." + obj.apNetMsk[2] + "." + obj.apNetMsk[3];
+    }
+  }
+  
+  function sendNewValue(name, val, string) 
+  {
+    if (string)
+	{
+		console.log("{\"new_"+ name + "\":\"" + val + "\"}");
+		websocket.send("{\"new_"+ name + "\":\"" + val + "\"}");
+	}
+	else
+	{
+		console.log("{\"new_"+ name + "\":" + val + "}");
+		websocket.send("{\"new_"+ name + "\":" + val + "}");
+	}
+	
+	if (name=="brightness")
+    {
+      document.getElementById("brightness2").innerHTML = val;
+    }
+	
+	if (name=="delaiBlocage")
+    {
+      document.getElementById("delaiBlocage").innerHTML = val;
+    }
+  }
+  
+  function sendNewUid(uidString)
+  {
+		console.log(uidString);
+		uid=uidString.split(':');
+		newUid = '[\"' + uid[0] + '\",\"' + uid[1] + '\",\"' + uid[2] + '\",\"' + uid[3] + '\"]';
+		console.log(newUid);
+		sendNewValue('newTagUid',newUid, false);
+  }
+  
+  
+  
+  </script>  
+	<body>
+	<table width=600>
+    <tr>
+      <td colspan="2"><h2><span id="objectNameTitle"></span></h2></td>
+    </tr>
+    <tr>
+      <td>Object name </td>
+      <td><input type="text" id="objectName" name="objectName" onchange="sendNewValue('objectName',document.getElementById('objectName').value, true);"> &nbsp; &nbsp; &nbsp; &nbsp; 20 characters max</td>
+    </tr>
+    <tr>
+      <td>Object ID </td>
+      <td><input type="number" id="objectId" name="objectId" min="1" max="1000" onchange="sendNewValue('objectId',document.getElementById('objectId').value, false);"> &nbsp; &nbsp; &nbsp; &nbsp; 1 - 1000</td>
+    </tr>
+	<tr>
+      <td>Group ID </td>
+      <td><input type="number" id="groupId" name="groupId" min="1" max="1000" onchange="sendNewValue('groupId',document.getElementById('groupId').value, false);"> &nbsp; &nbsp; &nbsp; &nbsp; 1 - 1000</td>
+    </tr>
+	<tr>
+      <td>nb tag en memoire</td>
+      <td><input type="number" id="nbTagEnMemoireMax" name="nbTagEnMemoireMax" min="1" max="5" onchange="sendNewValue('nbTagEnMemoireMax',this.value, false);"> &nbsp; &nbsp; &nbsp; &nbsp; 1 - 5</td>
+    </tr>
+	<tr>
+      <td>Tags (<span id="nbTagEnMemoireActuel"></span>/5)</td>
+      <td>
+		<table width="500px">
+		<tr>
+		<td width="500px">
+		0:&nbsp;&nbsp;<span id="tagUid_0"></span>&nbsp;&nbsp;<button id='removeUidBut_0' onclick="sendNewValue('removeUid',0, false);">&#10060;</button>
+		</td>
+		</tr>
+		<tr>
+		<td>
+		1:&nbsp;&nbsp;<span id="tagUid_1"></span>&nbsp;&nbsp;<button id='removeUidBut_1' onclick="sendNewValue('removeUid',1, false);">&#10060;</button>
+		</td>
+		</tr>
+		<tr>
+		<td>
+		2:&nbsp;&nbsp;<span id="tagUid_2"></span>&nbsp;&nbsp;<button id='removeUidBut_2' onclick="sendNewValue('removeUid',2, false);">&#10060;</button>
+		</td>
+		</tr>
+		<tr>
+		<td>
+		3:&nbsp;&nbsp;<span id="tagUid_3"></span>&nbsp;&nbsp;<button id='removeUidBut_3' onclick="sendNewValue('removeUid',3, false);">&#10060;</button>
+		</td>
+		</tr>
+		<tr>
+		<td>
+		4:&nbsp;&nbsp;<span id="tagUid_4"></span>&nbsp;&nbsp;<button id='removeUidBut_4' onclick="sendNewValue('removeUid',4, false);">&#10060;</button>
+		</td>
+		</tr>
+		</table>
+	  </td>
+    </tr>
+	<tr>
+      <td>Dernier tag scanné</td>
+      <td>
+		<span id="lastTagUid"></span>&nbsp;&nbsp;
+		<button id='addLastUid' onclick="sendNewValue('addLastUid',1, false);">Add last UID</button>
+	  </td>
+    </tr>
+	<tr>
+      <td>Nouveau tag</td>
+      <td>
+		<input type="text" id="newTagUid" name="newTagUid"> 
+		<button id='addNewUid' onclick="sendNewUid(document.getElementById('newTagUid').value);">Add new UID</button>
+	  </td>
+    </tr>	
+	<tr>
+      <td>Statuts Cloneur</td>
+      <td>statut Cloneur : <span id="statutActuel"></span></td>
+    </tr>
+	</table>
+	<table width=600>
+	<tr>
+      <td colspan="2"><h2><span id="apNameTitle"></span></h2></td>
+    </tr>
+    <tr>
+      <td>AP name </td>
+      <td><input type="text" id="apName" name="apName" onchange="sendNewValue('apName',document.getElementById('apName').value, true);"> &nbsp; &nbsp; &nbsp; &nbsp; 20 UPPERCASE characters max</td>
+    </tr>
+	<tr>
+      <td>AP password </td>
+      <td><input type="text" id="apPasword" name="apPasword" onchange="sendNewValue('apPasword',document.getElementById('apPasword').value, true);"> &nbsp; &nbsp; &nbsp; &nbsp; vide ou min 8 - max 20 characters</td>
+    </tr>
+	<tr>
+      <td>AP IP </td>
+      <td><input type="text" id="apIP" name="apIP" onchange="sendNewValue('apIP',document.getElementById('apIP').value, true);"> &nbsp; !! restart obligatoire apres modif !!</td>
+    </tr>
+	<tr>
+      <td>AP netmask </td>
+      <td><input type="text" id="apNetMsk" name="apNetMsk" onchange="sendNewValue('apNetMsk',document.getElementById('apNetMsk').value, true);"> &nbsp; !! restart obligatoire apres modif !!</td>
+    </tr>
+	<tr>
+      <td>WebSocket Connexion </td>
+      <td><span id="ws_connect">&#10060;</span></td>
+    </tr>
+    <tr>
+      <td>Uptime </td>
+      <td><span id="uptime"></span></td>
+    </tr>
+    <tr>
+      <td>Heartbeat </td>
+      <td ><span style="color:red; font-weight:bold; font-size:20px;" id="heartbeat">&#x2620;</span></td>
+    </tr>
+	<tr>
+      <td>BLINK esp8266</td>
+      <td><button onclick="sendNewValue('statutActuel',5);">BLINK</button></td>
+    </tr>
+	<tr>
+      <td>Default Object config</td>
+      <td><button onclick="sendNewValue('defaultObjectConfig',1, false);">DEFAULT OBJECT CONFIG</button></td>
+    </tr>
+	<tr>
+      <td>Default Network config</td>
+      <td><button onclick="sendNewValue('defaultNetworkConfig',1, false);">DEFAULT NETWORK CONFIG</button></td>
+    </tr>
+	<tr>
+      <td>Refresh config</td>
+      <td><button onclick="sendNewValue('refresh',1);">REFRESH</button></td>
+    </tr>
+	<tr>
+      <td>RESTART esp8266</td>
+      <td><button onclick="sendNewValue('restart',1);">RESTART</button></td>
+    </tr>
+	</table>	
+	</body>
+</html>
