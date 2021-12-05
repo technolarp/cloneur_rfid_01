@@ -4,8 +4,8 @@
 "groupId":1,
 "statutActuel":1,
 "statutPrecedent":0,
-"nbTagStock":3,
+"nbTagEnMemoireMax":3,
+"nbTagEnMemoireActuel":0,
 "indexTagActuel":0,
-"nbTagActuel":0,
 "tagUid":[["00","00","00","00"],["00","00","00","00"],["00","00","00","00"],["00","00","00","00"],["00","00","00","00"]]
 }

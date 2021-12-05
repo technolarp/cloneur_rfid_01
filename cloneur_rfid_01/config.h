@@ -3,7 +3,6 @@
 
 // to upload config dile : https://github.com/earlephilhower/arduino-esp8266littlefs-plugin/releases
 #define SIZE_ARRAY 20
-#define MAX_SIZE_CODE 9
 #define MAX_NB_TAG 5
 #define SIZE_UID 4
 
@@ -25,8 +24,8 @@ class M_config
   	uint8_t statutActuel;
   	uint8_t statutPrecedent;
 
-    uint8_t nbTagStock;
-    uint8_t nbTagActuel;
+    uint8_t nbTagEnMemoireMax;
+    uint8_t nbTagEnMemoireActuel;
     uint8_t indexTagActuel;
     uint8_t tagUid[MAX_NB_TAG][SIZE_UID];
   };
@@ -79,11 +78,13 @@ class M_config
   		// Copy values from the JsonObject to the Config
   		objectConfig.objectId = doc["objectId"];
   		objectConfig.groupId = doc["groupId"];
+		
   		objectConfig.statutActuel = doc["statutActuel"];
   		objectConfig.statutPrecedent = doc["statutPrecedent"];
-      objectConfig.indexTagActuel = doc["indexTagActuel"];
-      objectConfig.nbTagStock = doc["nbTagStock"];
-      objectConfig.nbTagActuel = doc["nbTagActuel"];
+		
+        objectConfig.indexTagActuel = doc["indexTagActuel"];
+        objectConfig.nbTagEnMemoireMax = doc["nbTagEnMemoireMax"];
+        objectConfig.nbTagEnMemoireActuel = doc["nbTagEnMemoireActuel"];
 
   		// read uid array
   		if (doc.containsKey("tagUid"))
@@ -92,26 +93,25 @@ class M_config
   			JsonArray tagUidArray = doc["tagUid"];
        
   			for (uint8_t i=0;i<MAX_NB_TAG;i++)
-        {
-          JsonArray uidArray=tagUidArray[i];
+			{
+				JsonArray uidArray=tagUidArray[i];
 
-          for (uint8_t j=0;j<SIZE_UID;j++)
-          {
-            const char* tagUid_0 = uidArray[j]; 
-            uint8_t hexValue = (uint8_t) strtol( &tagUid_0[0], NULL, 16);
-            objectConfig.tagUid[i][j] = hexValue;
-          }
-        }
+				for (uint8_t j=0;j<SIZE_UID;j++)
+				{
+					const char* tagUid_0 = uidArray[j]; 
+					uint8_t hexValue = (uint8_t) strtol( &tagUid_0[0], NULL, 16);
+					objectConfig.tagUid[i][j] = hexValue;
+				}
+			}
   		}
 
-     // read object name
-     if (doc.containsKey("objectName"))
-     { 
-        strlcpy(  objectConfig.objectName,
-                  doc["objectName"],
-                  SIZE_ARRAY);
-                  //sizeof(objectConfig.objectName));
-      }
+		// read object name
+		if (doc.containsKey("objectName"))
+		{ 
+			strlcpy(  objectConfig.objectName,
+					  doc["objectName"],
+					  SIZE_ARRAY);
+		}
     }
   		
     // Close the file (File's destructor doesn't close the file)
@@ -138,12 +138,13 @@ class M_config
     
     doc["objectId"] = objectConfig.objectId;
     doc["groupId"] = objectConfig.groupId;
+	
     doc["statutActuel"] = objectConfig.statutActuel;
     doc["statutPrecedent"] = objectConfig.statutPrecedent;
 
     doc["indexTagActuel"] = objectConfig.indexTagActuel;
-    doc["nbTagStock"] = min<uint8_t>(objectConfig.nbTagStock,MAX_NB_TAG); 
-    doc["nbTagActuel"] = objectConfig.nbTagActuel;
+    doc["nbTagEnMemoireMax"] = min<uint8_t>(objectConfig.nbTagEnMemoireMax,MAX_NB_TAG); 
+    doc["nbTagEnMemoireActuel"] = objectConfig.nbTagEnMemoireActuel;
     
     JsonArray tagUidArray = doc.createNestedArray("tagUid");
 
@@ -173,12 +174,13 @@ class M_config
   void writeDefaultObjectConfig(const char * filename)
   {
     objectConfig.objectId = 1;
-    objectConfig.groupId = 1;  
+    objectConfig.groupId = 1;
+	
     objectConfig.statutActuel = 1;
     objectConfig.statutPrecedent = 1;
   
-    objectConfig.nbTagStock = 5;
-    objectConfig.nbTagActuel = 0;
+    objectConfig.nbTagEnMemoireMax = 5;
+    objectConfig.nbTagEnMemoireActuel = 0;
     objectConfig.indexTagActuel = 0;
   
     for (uint8_t i=0;i<MAX_NB_TAG;i++)

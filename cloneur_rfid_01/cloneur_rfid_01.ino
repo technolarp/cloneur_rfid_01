@@ -2,7 +2,7 @@
    ----------------------------------------------------------------------------
    TECHNOLARP - https://technolarp.github.io/
    CLONEUR RFID 01 - https://github.com/technolarp/cloneur_rfid_01
-   version 1.0 - 11/2021
+   version 1.0 - 12/2021
    ----------------------------------------------------------------------------
 */
 
@@ -32,10 +32,14 @@
    ----------------------------------------------------------------------------
 */
 
-/*
-TODO
+/* TODO
+add buzzer
+move blink oled lib
+move rfid reading lib
+ajouter animation init au demarrage
+add reset config object & network
 faire une validation delete tag
-ajouter animation 
+clean up code
 */
 
 #include <Arduino.h>
@@ -52,7 +56,7 @@ AsyncWebSocket ws("/ws");
 char bufferWebsocket[300];
 bool flagBufferWebsocket = false;
 
-// RFID
+// RFID SPI
 #include <SPI.h>
 #include <PN532_SPI.h>
 #include <PN532.h>
@@ -77,7 +81,6 @@ uint8_t uidEmulate[3] = {0, 0, 0};
 
 // MCP23017
 #include "technolarp_mcp23017.h"
-//M_mcp23017 aMcp23017(0);
 M_mcp23017 aMcp23017;
 
 // OLED
@@ -116,7 +119,6 @@ unsigned long int currentMillisHB;
 unsigned long int intervalHB;
 
 
-uint8_t cptDebug = 0;
 /*
    ----------------------------------------------------------------------------
    SETUP
@@ -185,9 +187,11 @@ void setup()
 
   // WIFI
   WiFi.disconnect(true);
-  aOled.displayText("Init", 3, true, true, true, false);
+  Serial.println(F(""));
   Serial.println(F("connecting WiFi"));
-
+  
+  aOled.displayText("Init", 3, true, true, true, false);
+  
   // AP MODE
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAPConfig(aConfig.networkConfig.apIP, aConfig.networkConfig.apIP, aConfig.networkConfig.apNetMsk);
@@ -205,6 +209,10 @@ void setup()
   {
     Serial.printf("WiFi Failed!\n");
   }
+  else
+  {
+    Serial.println(F("WiFi OK"));
+  }
   
   // WEB SERVER
   // Print ESP Local IP Address
@@ -214,7 +222,6 @@ void setup()
   Serial.println(WiFi.softAPIP());
 
   // Route for root / web page
-  //server.serveStatic("/", LittleFS, "/www/").setDefaultFile("config.html").setTemplateProcessor(processor);
   server.serveStatic("/", LittleFS, "/www/").setDefaultFile("config.html");
   server.serveStatic("/config", LittleFS, "/config/");
   server.onNotFound(notFound);
@@ -231,6 +238,7 @@ void setup()
   previousMillisHB = currentMillisHB;
   intervalHB = 5000;
 
+  // RFID READING
   previousMillisReading = millis();
   intervalReading = 500;
 
@@ -392,14 +400,14 @@ void readRfidTag()
   // ajout d'un uid
   if (aMcp23017.checkButton(BOUTON_4))
   {
-    if (aConfig.objectConfig.nbTagActuel<aConfig.objectConfig.nbTagStock)
+    if (aConfig.objectConfig.nbTagEnMemoireActuel<aConfig.objectConfig.nbTagEnMemoireMax)
     {
       for (uint8_t i=0;i<SIZE_UID;i++)
       {
-        aConfig.objectConfig.tagUid[aConfig.objectConfig.nbTagActuel][i]=uidRead[i];
+        aConfig.objectConfig.tagUid[aConfig.objectConfig.nbTagEnMemoireActuel][i]=uidRead[i];
       }
       
-      aConfig.objectConfig.nbTagActuel+=1;      
+      aConfig.objectConfig.nbTagEnMemoireActuel+=1;      
       writeObjectConfig();
       
       aOled.displayText("SCAN TAG", 2, true, true, false, true);
@@ -456,7 +464,7 @@ void emulateRfidTag()
 
   aOled.displayText("EMULATION", 2, true, false, false, true);
   
-  for (uint8_t i=0;i<min<uint8_t>(aConfig.objectConfig.nbTagActuel,aConfig.objectConfig.nbTagStock);i++)
+  for (uint8_t i=0;i<min<uint8_t>(aConfig.objectConfig.nbTagEnMemoireActuel,aConfig.objectConfig.nbTagEnMemoireMax);i++)
   {
     uint8_t indexTmp = i+1;
     
@@ -466,7 +474,7 @@ void emulateRfidTag()
                   aConfig.objectConfig.tagUid[i][2], 
                   aConfig.objectConfig.tagUid[i][3], 
                   indexTmp, 
-                  aConfig.objectConfig.nbTagActuel);
+                  aConfig.objectConfig.nbTagEnMemoireActuel);
     
     if (i==aConfig.objectConfig.indexTagActuel)
     {
@@ -493,7 +501,7 @@ void emulateRfidTag()
   // choix uid haut
   if (aMcp23017.checkButton(BOUTON_3))
   {
-    if ( (aConfig.objectConfig.indexTagActuel < (aConfig.objectConfig.nbTagActuel-1)) && (aConfig.objectConfig.indexTagActuel < aConfig.objectConfig.nbTagStock-1) )
+    if ( (aConfig.objectConfig.indexTagActuel < (aConfig.objectConfig.nbTagEnMemoireActuel-1)) && (aConfig.objectConfig.indexTagActuel < aConfig.objectConfig.nbTagEnMemoireMax-1) )
     {
       aConfig.objectConfig.indexTagActuel+=1;
       writeObjectConfig();
@@ -685,9 +693,9 @@ void removeUid(uint8_t uidToRemove)
 {
   uint8_t toRemove = min<uint8_t>(MAX_NB_TAG-1, uidToRemove);
   
-  if (aConfig.objectConfig.nbTagActuel>0)
+  if (aConfig.objectConfig.nbTagEnMemoireActuel>0)
   {
-    for (uint8_t i=toRemove;i<aConfig.objectConfig.nbTagActuel-1;i++)
+    for (uint8_t i=toRemove;i<aConfig.objectConfig.nbTagEnMemoireActuel-1;i++)
     {
       for (uint8_t j=0;j<SIZE_UID;j++)
       {
@@ -695,7 +703,7 @@ void removeUid(uint8_t uidToRemove)
       }
     }
 
-    for (uint8_t i=aConfig.objectConfig.nbTagActuel-1;i<MAX_NB_TAG;i++)
+    for (uint8_t i=aConfig.objectConfig.nbTagEnMemoireActuel-1;i<MAX_NB_TAG;i++)
     {
       for (uint8_t j=0;j<SIZE_UID;j++)
       {
@@ -703,7 +711,7 @@ void removeUid(uint8_t uidToRemove)
       }
     }
     
-    aConfig.objectConfig.nbTagActuel--;
+    aConfig.objectConfig.nbTagEnMemoireActuel--;
     if (aConfig.objectConfig.indexTagActuel>0)
     {
       aConfig.objectConfig.indexTagActuel--;
@@ -866,11 +874,11 @@ void handleWebsocketBuffer()
       sendObjectConfigFlag = true;
     }
   
-    if (doc.containsKey("new_nbTagStock")) 
+    if (doc.containsKey("new_nbTagEnMemoireMax")) 
     {
-      uint16_t tmpValeur = doc["new_nbTagStock"];
-      aConfig.objectConfig.nbTagStock = checkValeur(tmpValeur,1,5);
-      aConfig.objectConfig.nbTagActuel=min<uint8_t>(aConfig.objectConfig.nbTagActuel,aConfig.objectConfig.nbTagStock);
+      uint16_t tmpValeur = doc["new_nbTagEnMemoireMax"];
+      aConfig.objectConfig.nbTagEnMemoireMax = checkValeur(tmpValeur,1,5);
+      aConfig.objectConfig.nbTagEnMemoireActuel=min<uint8_t>(aConfig.objectConfig.nbTagEnMemoireActuel,aConfig.objectConfig.nbTagEnMemoireMax);
       
       writeObjectConfigFlag = true;
       sendObjectConfigFlag = true;
@@ -891,13 +899,13 @@ void handleWebsocketBuffer()
     
     if ( doc.containsKey("new_addLastUid") && doc["new_addLastUid"]==1 )
     {
-      if (aConfig.objectConfig.nbTagActuel<MAX_NB_TAG)
+      if (aConfig.objectConfig.nbTagEnMemoireActuel<MAX_NB_TAG)
       {
         for (uint8_t  i=0;i<uidReadLength;i++)
         {
-          aConfig.objectConfig.tagUid[aConfig.objectConfig.nbTagActuel][i]=uidRead[i];
+          aConfig.objectConfig.tagUid[aConfig.objectConfig.nbTagEnMemoireActuel][i]=uidRead[i];
         }
-        aConfig.objectConfig.nbTagActuel++;          
+        aConfig.objectConfig.nbTagEnMemoireActuel++;          
   
         writeObjectConfigFlag = true;
         sendObjectConfigFlag = true;
@@ -910,7 +918,7 @@ void handleWebsocketBuffer()
     
     if (doc.containsKey("new_newTagUid")) 
     {
-      if (aConfig.objectConfig.nbTagActuel<MAX_NB_TAG)
+      if (aConfig.objectConfig.nbTagEnMemoireActuel<MAX_NB_TAG)
       {
         JsonArray newUidValue = doc["new_newTagUid"];
           
@@ -919,10 +927,10 @@ void handleWebsocketBuffer()
           const char* tagUid_0 = newUidValue[i];
           uint8_t hexValue = (uint8_t) strtol( &tagUid_0[0], NULL, 16);
           
-          aConfig.objectConfig.tagUid[aConfig.objectConfig.nbTagActuel][i]=hexValue;
+          aConfig.objectConfig.tagUid[aConfig.objectConfig.nbTagEnMemoireActuel][i]=hexValue;
           uidRead[i]=hexValue;
         }
-        aConfig.objectConfig.nbTagActuel++;          
+        aConfig.objectConfig.nbTagEnMemoireActuel++;          
   
         writeObjectConfigFlag = true;
         sendObjectConfigFlag = true;

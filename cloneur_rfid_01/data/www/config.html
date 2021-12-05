@@ -90,9 +90,9 @@
     }
 	
 			
-	if (obj.hasOwnProperty('tagUid') && obj.hasOwnProperty('nbTagActuel')  && obj.hasOwnProperty('nbTagStock'))
+	if (obj.hasOwnProperty('tagUid') && obj.hasOwnProperty('nbTagEnMemoireActuel')  && obj.hasOwnProperty('nbTagEnMemoireMax'))
     {
-      for (let i = 0; i < obj.nbTagActuel ; i++)
+      for (let i = 0; i < obj.nbTagEnMemoireActuel ; i++)
 	  {
 		uid = "";
 		for (let j = 0; j < 4 ; j++)
@@ -111,10 +111,10 @@
 		document.getElementById(tagName).innerHTML=uid.toUpperCase();
 		document.getElementById(buttonName).innerHTML='&#10060;';
 	  }
-	  document.getElementById("nbTagActuel").innerHTML = obj.nbTagActuel;
-	  document.getElementById("nbTagStock").value = obj.nbTagStock;
+	  document.getElementById("nbTagEnMemoireActuel").innerHTML = obj.nbTagEnMemoireActuel;
+	  document.getElementById("nbTagEnMemoireMax").value = obj.nbTagEnMemoireMax;
 	  
-	  for (let i = obj.nbTagActuel; i < 5 ; i++)
+	  for (let i = obj.nbTagEnMemoireActuel; i < 5 ; i++)
 	  {
 		tagName="tagUid_" + i;
 		buttonName="removeUidBut_" + i;
@@ -249,10 +249,10 @@
     </tr>
 	<tr>
       <td>nb tag en memoire</td>
-      <td><input type="number" id="nbTagStock" name="nbTagStock" min="1" max="5" onchange="sendNewValue('nbTagStock',this.value, false);"> &nbsp; &nbsp; &nbsp; &nbsp; 1 - 5</td>
+      <td><input type="number" id="nbTagEnMemoireMax" name="nbTagEnMemoireMax" min="1" max="5" onchange="sendNewValue('nbTagEnMemoireMax',this.value, false);"> &nbsp; &nbsp; &nbsp; &nbsp; 1 - 5</td>
     </tr>
 	<tr>
-      <td>Tags (<span id="nbTagActuel"></span>/5)</td>
+      <td>Tags (<span id="nbTagEnMemoireActuel"></span>/5)</td>
       <td>
 		<table width="500px">
 		<tr>
