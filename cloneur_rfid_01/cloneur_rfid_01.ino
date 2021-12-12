@@ -135,7 +135,7 @@ void setup()
   Serial.println(F("----------------------------------------------------------------------------"));
   Serial.println(F("TECHNOLARP - https://technolarp.github.io/"));
   Serial.println(F("CLONEUR RFID 01 - https://github.com/technolarp/cloneur_rfid_01"));
-  Serial.println(F("version 1.0 - 11/2021"));
+  Serial.println(F("version 1.0 - 12/2021"));
   Serial.println(F("----------------------------------------------------------------------------"));
 
   // I2C RESET
@@ -159,7 +159,7 @@ void setup()
   aConfig.printJsonFile("/config/objectconfig.txt");
   aConfig.readObjectConfig("/config/objectconfig.txt");
 
-  //aConfig.printJsonFile("/config/networkconfig.txt");
+  aConfig.printJsonFile("/config/networkconfig.txt");
   aConfig.readNetworkConfig("/config/networkconfig.txt");
 
   aOled.animationDepart();
@@ -196,6 +196,7 @@ void setup()
 
   // WIFI
   WiFi.disconnect(true);
+
   Serial.println(F(""));
   Serial.println(F("connecting WiFi"));
   
@@ -203,32 +204,43 @@ void setup()
   // AP MODE
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAPConfig(aConfig.networkConfig.apIP, aConfig.networkConfig.apIP, aConfig.networkConfig.apNetMsk);
-  WiFi.softAP(aConfig.networkConfig.apName, aConfig.networkConfig.apPassword);
+  bool apRC = WiFi.softAP(aConfig.networkConfig.apName, aConfig.networkConfig.apPassword);
+
+  if (apRC)
+  {
+    Serial.println(F("AP WiFi OK"));
+  }
+  else
+  {
+    Serial.println(F("AP WiFi failed"));
+  }
+
+  // Print ESP soptAP IP Address
+  Serial.print(F("softAPIP: "));
+  Serial.println(WiFi.softAPIP());
   
   /*
   // CLIENT MODE POUR DEBUG
-  const char* ssid = "MYDEBUG";
-  const char* password = "ppppppp";
+  const char* ssid = "SID";
+  const char* password = "PASSWORD";
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  */
   
   if (WiFi.waitForConnectResult() != WL_CONNECTED) 
   {
-    Serial.printf("WiFi Failed!\n");
+    Serial.println(F("WiFi Failed!"));
   }
   else
   {
     Serial.println(F("WiFi OK"));
   }
-  
-  // WEB SERVER
+
   // Print ESP Local IP Address
   Serial.print(F("localIP: "));
   Serial.println(WiFi.localIP());
-  Serial.print(F("softAPIP: "));
-  Serial.println(WiFi.softAPIP());
-
+  */
+  
+  // WEB SERVER
   // Route for root / web page
   server.serveStatic("/", LittleFS, "/www/").setDefaultFile("config.html");
   server.serveStatic("/config", LittleFS, "/config/");
