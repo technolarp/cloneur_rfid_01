@@ -6,7 +6,7 @@
 #define MAX_NB_TAG 5
 #define SIZE_UID 4
 
-#define JSONBUFFERSIZE 1024
+#define JSONBUFFERSIZE 2048
 
 #include <IPAddress.h>
 
@@ -196,7 +196,7 @@ class M_config
     
     writeObjectConfig(filename);
     }
-  
+
   void readNetworkConfig(const char * filename)
   {
     // lire les données depuis le fichier littleFS
@@ -206,10 +206,6 @@ class M_config
     {
       Serial.println(F("Failed to open file for reading"));
       return;
-    }
-    else
-    {
-      Serial.println(F("File opened"));
     }
   
     StaticJsonDocument<JSONBUFFERSIZE> doc;
@@ -248,14 +244,14 @@ class M_config
       { 
         strlcpy(  networkConfig.apName,
                   doc["apName"],
-                  sizeof(networkConfig.apName));
+                  SIZE_ARRAY);
       }
 
       if (doc.containsKey("apPassword"))
       { 
         strlcpy(  networkConfig.apPassword,
                   doc["apPassword"],
-                  sizeof(networkConfig.apPassword));
+                  SIZE_ARRAY);
       }
     }
       
@@ -282,23 +278,18 @@ class M_config
     doc["apName"] = networkConfig.apName;
     doc["apPassword"] = networkConfig.apPassword;
 
-    StaticJsonDocument<128> docIp;
-    JsonArray arrayIp = docIp.to<JsonArray>();
-    arrayIp.add(networkConfig.apIP[0]);
-    arrayIp.add(networkConfig.apIP[1]);
-    arrayIp.add(networkConfig.apIP[2]);
-    arrayIp.add(networkConfig.apIP[3]);
-
-    StaticJsonDocument<128> docNetMask;
-    JsonArray arrayNetMask = docNetMask.to<JsonArray>();
-    arrayNetMask.add(networkConfig.apNetMsk[0]);
-    arrayNetMask.add(networkConfig.apNetMsk[1]);
-    arrayNetMask.add(networkConfig.apNetMsk[2]);
-    arrayNetMask.add(networkConfig.apNetMsk[3]);
+    JsonArray arrayIp = doc.createNestedArray("apIP");
+    for (uint8_t i=0;i<4;i++)
+    {
+      arrayIp.add(networkConfig.apIP[i]);
+    }
     
-    doc["apIP"]=arrayIp;
-    doc["apNetMsk"]=arrayNetMask;
-
+    JsonArray arrayNetMask = doc.createNestedArray("apNetMsk");
+    for (uint8_t i=0;i<4;i++)
+    {
+      arrayNetMask.add(networkConfig.apNetMsk[i]);
+    }
+    
     // Serialize JSON to file
     if (serializeJson(doc, file) == 0) 
     {
@@ -311,25 +302,25 @@ class M_config
   
   void writeDefaultNetworkConfig(const char * filename)
   {
-  strlcpy(  networkConfig.apName,
-            "CLONEURRFID",
-            sizeof("CLONEURRFID"));
-  
-  strlcpy(  networkConfig.apPassword,
-            "",
-            sizeof(""));
-
-  networkConfig.apIP[0]=192;
-  networkConfig.apIP[1]=168;
-  networkConfig.apIP[2]=1;
-  networkConfig.apIP[3]=1;
-
-  networkConfig.apNetMsk[0]=255;
-  networkConfig.apNetMsk[1]=255;
-  networkConfig.apNetMsk[2]=255;
-  networkConfig.apNetMsk[3]=0;
+    strlcpy(  networkConfig.apName,
+              "CLONEURRFID",
+              SIZE_ARRAY);
     
-  writeNetworkConfig(filename);
+    strlcpy(  networkConfig.apPassword,
+              "",
+              SIZE_ARRAY);
+  
+    networkConfig.apIP[0]=192;
+    networkConfig.apIP[1]=168;
+    networkConfig.apIP[2]=1;
+    networkConfig.apIP[3]=1;
+  
+    networkConfig.apNetMsk[0]=255;
+    networkConfig.apNetMsk[1]=255;
+    networkConfig.apNetMsk[2]=255;
+    networkConfig.apNetMsk[3]=0;
+      
+    writeNetworkConfig(filename);
   }
 
   void stringJsonFile(const char * filename, char * target, uint16_t targetReadSize)

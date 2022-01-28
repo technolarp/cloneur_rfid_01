@@ -35,6 +35,8 @@
 */
 
 /* TODO
+
+version 1.1
 faire une animation hacker
 check doublon
 */
@@ -200,7 +202,7 @@ void setup()
   Serial.println(F(""));
   Serial.println(F("connecting WiFi"));
   
-  
+  /**/
   // AP MODE
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAPConfig(aConfig.networkConfig.apIP, aConfig.networkConfig.apIP, aConfig.networkConfig.apNetMsk);
@@ -234,11 +236,11 @@ void setup()
   {
     Serial.println(F("WiFi OK"));
   }
-
+    
   // Print ESP Local IP Address
   Serial.print(F("localIP: "));
   Serial.println(WiFi.localIP());
-  */
+  /**/
   
   // WEB SERVER
   // Route for root / web page
@@ -255,7 +257,7 @@ void setup()
 
   // HEARTBEAT
   previousMillisHB = millis();
-  intervalHB = 5000;
+  intervalHB = 10000;
 
   // RFID READING
   previousMillisReading = millis();
@@ -285,9 +287,6 @@ void setup()
 */
 void loop()
 {  
-  // avoid watchdog reset
-  yield();
-  
   // WEBSOCKET
   ws.cleanupClients();
 
@@ -507,7 +506,7 @@ void emulateRfidTag()
                   aConfig.objectConfig.tagUid[i][2], 
                   aConfig.objectConfig.tagUid[i][3], 
                   indexTmp, 
-                  aConfig.objectConfig.nbTagEnMemoireActuel);
+                  aConfig.objectConfig.nbTagEnMemoireMax);
     
     if (i==aConfig.objectConfig.indexTagActuel)
     {
@@ -698,13 +697,10 @@ void sendTagUid()
   ws.textAll(toSend);
 }
 
-
 void notFound(AsyncWebServerRequest *request)
 {
     request->send(404, "text/plain", "Not found");
 }
-
-
 
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) 
 {
@@ -735,7 +731,6 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
         break;
   }
 }
-
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) 
 {
@@ -774,7 +769,7 @@ void handleWebsocketBuffer()
     {
       strlcpy(  aConfig.objectConfig.objectName,
                 doc["new_objectName"],
-                sizeof(aConfig.objectConfig.objectName));
+                SIZE_ARRAY);
   
       writeObjectConfigFlag = true;
       sendObjectConfigFlag = true;
@@ -819,8 +814,7 @@ void handleWebsocketBuffer()
       writeObjectConfigFlag = true;
       sendObjectConfigFlag = true;
     }
-  
-    
+      
     if ( doc.containsKey("new_addLastUid") && doc["new_addLastUid"]==1 )
     {
       if (aConfig.objectConfig.nbTagEnMemoireActuel<MAX_NB_TAG)
@@ -879,82 +873,67 @@ void handleWebsocketBuffer()
     // **********************************************
     // modif network config
     // **********************************************
+    // modif network config
     if (doc.containsKey("new_apName")) 
     {
       strlcpy(  aConfig.networkConfig.apName,
                 doc["new_apName"],
-                sizeof(aConfig.networkConfig.apName));
-  
+                SIZE_ARRAY);
+    
       // check for unsupported char
-      checkCharacter(aConfig.networkConfig.apName, "ABCDEFGHIJKLMNOPQRSTUVWYZ", 'A');
+      checkCharacter(aConfig.networkConfig.apName, "ABCDEFGHIJKLMNOPQRSTUVWYXZ0123456789_-", 'A');
       
       writeNetworkConfigFlag = true;
       sendNetworkConfigFlag = true;
     }
-  
+    
     if (doc.containsKey("new_apPassword")) 
     {
       strlcpy(  aConfig.networkConfig.apPassword,
                 doc["new_apPassword"],
                 sizeof(aConfig.networkConfig.apPassword));
-  
+    
       writeNetworkConfigFlag = true;
+      sendNetworkConfigFlag = true;
     }
-  
+    
     if (doc.containsKey("new_apIP")) 
     {
       char newIPchar[16] = "";
-  
+    
       strlcpy(  newIPchar,
                 doc["new_apIP"],
                 sizeof(newIPchar));
-  
+    
       IPAddress newIP;
-      if (newIP.fromString(newIPchar)) 
+      if (newIP.fromString(newIPchar))
       {
         Serial.println("valid IP");
         aConfig.networkConfig.apIP = newIP;
-  
+    
         writeNetworkConfigFlag = true;
       }
       
       sendNetworkConfigFlag = true;
     }
-  
+    
     if (doc.containsKey("new_apNetMsk")) 
     {
       char newNMchar[16] = "";
-  
+    
       strlcpy(  newNMchar,
                 doc["new_apNetMsk"],
                 sizeof(newNMchar));
-  
+    
       IPAddress newNM;
       if (newNM.fromString(newNMchar)) 
       {
         Serial.println("valid netmask");
         aConfig.networkConfig.apNetMsk = newNM;
-  
+    
         writeNetworkConfigFlag = true;
       }
-  
-      sendNetworkConfigFlag = true;
-    }
-  
-    if ( doc.containsKey("new_defaultObjectConfig") && doc["new_defaultObjectConfig"]==1 )
-    {
-      Serial.println(F("reset to default object config"));
-      aConfig.writeDefaultObjectConfig("/config/objectconfig.txt");
-      
-      sendObjectConfigFlag = true;
-      uneFois = true;
-    }
-  
-    if ( doc.containsKey("new_defaultNetworkConfig") && doc["new_defaultNetworkConfig"]==1 )
-    {
-      Serial.println(F("reset to default network config"));
-      aConfig.writeDefaultNetworkConfig("/config/networkconfig.txt");
-      
+    
       sendNetworkConfigFlag = true;
     }
     
@@ -964,37 +943,54 @@ void handleWebsocketBuffer()
       Serial.println(F("RESTART RESTART RESTART"));
       ESP.restart();
     }
-  
+    
     if ( doc.containsKey("new_refresh") && doc["new_refresh"]==1 )
     {
       Serial.println(F("REFRESH"));
+    
       sendObjectConfigFlag = true;
       sendNetworkConfigFlag = true;
     }
-  
+    
+    if ( doc.containsKey("new_defaultObjectConfig") && doc["new_defaultObjectConfig"]==1 )
+    {
+      aConfig.writeDefaultObjectConfig("/config/objectconfig.txt");
+      Serial.println(F("reset to default object config"));
+    
+      sendObjectConfigFlag = true;
+      uneFois = true;
+    }
+    
+    if ( doc.containsKey("new_defaultNetworkConfig") && doc["new_defaultNetworkConfig"]==1 )
+    {
+      aConfig.writeDefaultNetworkConfig("/config/networkconfig.txt");
+      Serial.println(F("reset to default network config"));          
+      
+      sendNetworkConfigFlag = true;
+    }
+    
     // modif config
     // write object config
     if (writeObjectConfigFlag)
     {
       writeObjectConfig();
-      aConfig.printJsonFile("/config/objectconfig.txt");
-      
+    
       // update statut
       uneFois = true;
     }
-  
+    
     // resend object config
     if (sendObjectConfigFlag)
     {
       sendObjectConfig();
     }
-  
+    
     // write network config
     if (writeNetworkConfigFlag)
     {
       writeNetworkConfig();
     }
-  
+    
     // resend network config
     if (sendNetworkConfigFlag)
     {
